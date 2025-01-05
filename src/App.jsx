@@ -6,17 +6,24 @@ import Papa from 'papaparse';
 const InfinityNikkiTracker = () => {
   const [activeTab, setActiveTab] = useState('mira');
   const [miraLevels, setMiraLevels] = useState([]);
-  const [checkedItems, setCheckedItems] = useState({});
+  const [checkedItems, setCheckedItems] = useState(() => {
+    // Load saved checkbox states from localStorage
+    const saved = localStorage.getItem('checkedItems');
+    return saved ? JSON.parse(saved) : {};
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1nmUiUmMZQtebYZx3_XyimGPZNlFVlcScffJ8nZ8HwKc/export?format=csv&gid=0';
 
   useEffect(() => {
     const fetchSheetData = async () => {
       try {
         setLoading(true);
-        const response = await window.fs.readFile('monthly_profits.csv', { encoding: 'utf8' });
+        const response = await fetch(SHEET_URL);
+        const text = await response.text();
         
-        Papa.parse(response, {
+        Papa.parse(text, {
           header: true,
           dynamicTyping: true,
           skipEmptyLines: true,
@@ -46,7 +53,7 @@ const InfinityNikkiTracker = () => {
           }
         });
       } catch (error) {
-        console.error('Error reading file:', error);
+        console.error('Error fetching sheet:', error);
         setError('Error loading sheet data');
         setLoading(false);
       }
@@ -57,6 +64,11 @@ const InfinityNikkiTracker = () => {
     const interval = setInterval(fetchSheetData, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Save checkbox states to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('checkedItems', JSON.stringify(checkedItems));
+  }, [checkedItems]);
 
   const tabs = [
     { id: 'mira', name: 'Mira Level Rewards' },
