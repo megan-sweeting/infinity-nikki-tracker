@@ -1,13 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import Papa from 'papaparse';
+
+const Card = ({ children, className = '' }) => (
+  <div className={`bg-white rounded-lg shadow-sm ${className}`}>
+    {children}
+  </div>
+);
+
+const Checkbox = ({ checked, onCheckedChange, className = '' }) => (
+  <input
+    type="checkbox"
+    checked={checked}
+    onChange={(e) => onCheckedChange(e.target.checked)}
+    className={`h-4 w-4 rounded border-gray-300 ${className}`}
+  />
+);
 
 const InfinityNikkiTracker = () => {
   const [activeTab, setActiveTab] = useState('mira');
   const [miraLevels, setMiraLevels] = useState([]);
   const [checkedItems, setCheckedItems] = useState(() => {
-    // Load saved checkbox states from localStorage
     const saved = localStorage.getItem('checkedItems');
     return saved ? JSON.parse(saved) : {};
   });
@@ -60,12 +72,10 @@ const InfinityNikkiTracker = () => {
     };
 
     fetchSheetData();
-    // Refresh data every 5 minutes
     const interval = setInterval(fetchSheetData, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Save checkbox states to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('checkedItems', JSON.stringify(checkedItems));
   }, [checkedItems]);
@@ -80,7 +90,6 @@ const InfinityNikkiTracker = () => {
     { id: 'world', name: 'World Quests' }
   ];
 
-  // Function to format special values
   const formatValue = (value) => {
     if (typeof value === 'number') {
       return value.toLocaleString();
@@ -88,7 +97,6 @@ const InfinityNikkiTracker = () => {
     return value;
   };
 
-  // Function to render reward with emoji
   const renderReward = (name, value) => {
     if (value === "-" || value === null || value === undefined) return null;
     
@@ -133,7 +141,6 @@ const InfinityNikkiTracker = () => {
 
   return (
     <div className="p-4 min-h-screen bg-gray-50">
-      {/* Tabs */}
       <div className="mb-4 border-b border-gray-200">
         <div className="flex space-x-2 overflow-x-auto">
           {tabs.map(tab => (
@@ -152,9 +159,8 @@ const InfinityNikkiTracker = () => {
         </div>
       </div>
 
-      {/* Content */}
       <Card className="w-full max-w-4xl mx-auto">
-        <CardContent className="p-6">
+        <div className="p-6">
           {activeTab === 'mira' && (
             <div className="space-y-6">
               {miraLevels.map((level) => (
@@ -164,7 +170,6 @@ const InfinityNikkiTracker = () => {
                     checkedItems[level.id] ? 'bg-purple-50' : 'bg-white'
                   } border border-gray-100 hover:border-purple-200 transition-colors duration-200`}
                 >
-                  {/* Level Header */}
                   <div className="flex items-center space-x-3 mb-3">
                     <Checkbox
                       checked={checkedItems[level.id]}
@@ -181,7 +186,6 @@ const InfinityNikkiTracker = () => {
                     </div>
                   </div>
 
-                  {/* Rewards Grid */}
                   <div className="ml-8 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                     {Object.entries(level.rewards).map(([name, value]) => 
                       renderReward(name, value)
@@ -197,7 +201,7 @@ const InfinityNikkiTracker = () => {
               Select Mira Level Rewards tab to view data
             </div>
           )}
-        </CardContent>
+        </div>
       </Card>
     </div>
   );
