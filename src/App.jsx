@@ -1,87 +1,194 @@
-import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from './components/ui/card';
-import { Checkbox } from './components/ui/checkbox';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import Papa from 'papaparse';
 
-const App = () => {
-  // Sample data based on your spreadsheet
-  const levels = [
-    { id: 1, level: "Mira Level 1", title: "-", crystals: "-", diamonds: "-", energy: "-", required: 20, completed: true },
-    { id: 2, level: "Mira Level 2", title: "-", crystals: "-", diamonds: "-", energy: 1, required: 20, completed: true },
-    { id: 3, level: "Mira Level 3", title: "-", crystals: "-", diamonds: "-", energy: "-", required: 20, completed: true },
-    { id: 4, level: "Mira Level 4", title: "-", crystals: "-", diamonds: "-", energy: "-", required: 20, completed: true },
-    { id: 5, level: "Mira Level 5", title: "-", crystals: "-", diamonds: 30, energy: "-", required: 40, completed: true },
-    { id: 6, level: "Mira Level 6", title: "-", crystals: "-", diamonds: "-", energy: "-", required: 20, completed: true },
-    { id: 7, level: "Mira Level 7", title: "-", crystals: 1, diamonds: "-", energy: "-", required: 20, completed: true },
-    { id: 8, level: "Mira Level 8", title: "-", crystals: "-", diamonds: "-", energy: 1, required: 20, completed: true },
-    { id: 9, level: "Mira Level 9", title: "-", crystals: "-", diamonds: "-", energy: "-", required: 20, completed: true },
-    { id: 10, level: "Mira Level 10", title: "Dreaming Traveler", crystals: "-", diamonds: 30, energy: "-", required: 40, completed: true }
+const InfinityNikkiTracker = () => {
+  const [activeTab, setActiveTab] = useState('mira');
+  const [miraLevels, setMiraLevels] = useState([]);
+  const [checkedItems, setCheckedItems] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchSheetData = async () => {
+      try {
+        setLoading(true);
+        const response = await window.fs.readFile('monthly_profits.csv', { encoding: 'utf8' });
+        
+        Papa.parse(response, {
+          header: true,
+          dynamicTyping: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const formattedData = results.data.map((row, index) => ({
+              id: index + 1,
+              level: row['Mira Level'],
+              title: row['Title'] || "-",
+              rewards: {
+                "Resonite Crystal": row['Resonite Crystal'] || "-",
+                "Diamond": row['Diamond'] || "-",
+                "Energy Crystal": row['Energy Crystal'] || "-",
+                "Shiny Bubbles": row['Shiny Bubbles'] || "-",
+                "Thread of Purity": row['Thread of Purity'] || "-",
+                "Bling": row['Bling'] || "-",
+                "Crafting Material": row['Crafting Material'] || "-",
+                "Eureka": row['Eureka'] || "-"
+              }
+            }));
+            setMiraLevels(formattedData);
+            setLoading(false);
+          },
+          error: (error) => {
+            console.error('Error parsing CSV:', error);
+            setError('Error parsing sheet data');
+            setLoading(false);
+          }
+        });
+      } catch (error) {
+        console.error('Error reading file:', error);
+        setError('Error loading sheet data');
+        setLoading(false);
+      }
+    };
+
+    fetchSheetData();
+    // Refresh data every 5 minutes
+    const interval = setInterval(fetchSheetData, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const tabs = [
+    { id: 'mira', name: 'Mira Level Rewards' },
+    { id: 'stylist', name: "Stylist's Guild Gift" },
+    { id: 'compendium', name: 'Compendium Rewards' },
+    { id: 'rank', name: 'Stylist Rank' },
+    { id: 'advanced', name: 'Advanced Courses' },
+    { id: 'main', name: 'Main Quests' },
+    { id: 'world', name: 'World Quests' }
   ];
 
-  const [checkedItems, setCheckedItems] = useState(
-    levels.reduce((acc, level) => ({ ...acc, [level.id]: level.completed }), {})
-  );
+  // Function to format special values
+  const formatValue = (value) => {
+    if (typeof value === 'number') {
+      return value.toLocaleString();
+    }
+    return value;
+  };
 
-  const totalLevels = levels.length;
-  const completedLevels = Object.values(checkedItems).filter(Boolean).length;
-  const progressPercentage = (completedLevels / totalLevels) * 100;
+  // Function to render reward with emoji
+  const renderReward = (name, value) => {
+    if (value === "-" || value === null || value === undefined) return null;
+    
+    const getEmoji = (name) => {
+      switch (name) {
+        case "Resonite Crystal": return "🔮";
+        case "Diamond": return "💎";
+        case "Energy Crystal": return "⚡";
+        case "Shiny Bubbles": return "✨";
+        case "Thread of Purity": return "🧵";
+        case "Bling": return "⭐";
+        case "Crafting Material": return "🛠️";
+        case "Eureka": return "💡";
+        default: return "";
+      }
+    };
+
+    return (
+      <div key={name} className="flex items-center space-x-2">
+        <span>{getEmoji(name)}</span>
+        <span>{name}:</span>
+        <span className="font-medium">{formatValue(value)}</span>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-gray-500">Loading data...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 min-h-screen bg-gray-50">
-      <Card className="w-full max-w-3xl mx-auto">
-        <CardHeader className="bg-purple-100 rounded-t-lg">
-          <CardTitle className="text-2xl text-center text-purple-800">Infinity Nikki Level Tracker</CardTitle>
-          <div className="w-full bg-purple-200 h-2 rounded-full mt-4">
-            <div 
-              className="bg-purple-600 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${progressPercentage}%` }}
-            />
-          </div>
-          <div className="text-center text-sm text-purple-700 mt-2">
-            {completedLevels} of {totalLevels} levels completed ({progressPercentage.toFixed(1)}%)
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            {levels.map((level) => (
-              <div key={level.id} 
-                className={`flex items-center justify-between p-4 rounded-lg ${
-                  checkedItems[level.id] ? 'bg-purple-50' : 'bg-white'
-                } border border-purple-100 hover:border-purple-300 transition-colors duration-200`}
-              >
-                <div className="flex items-center space-x-4">
-                  <Checkbox
-                    checked={checkedItems[level.id]}
-                    onCheckedChange={(checked) => {
-                      setCheckedItems(prev => ({...prev, [level.id]: checked}));
-                    }}
-                    className="border-purple-400"
-                  />
-                  <div>
-                    <h3 className="font-medium">{level.level}</h3>
-                    {level.title !== "-" && (
-                      <p className="text-sm text-purple-600">{level.title}</p>
+      {/* Tabs */}
+      <div className="mb-4 border-b border-gray-200">
+        <div className="flex space-x-2 overflow-x-auto">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ${
+                activeTab === tab.id
+                  ? 'bg-white border border-b-0 border-gray-200 text-purple-600'
+                  : 'text-gray-500 hover:text-purple-600'
+              }`}
+            >
+              {tab.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardContent className="p-6">
+          {activeTab === 'mira' && (
+            <div className="space-y-6">
+              {miraLevels.map((level) => (
+                <div
+                  key={level.id}
+                  className={`p-4 rounded-lg ${
+                    checkedItems[level.id] ? 'bg-purple-50' : 'bg-white'
+                  } border border-gray-100 hover:border-purple-200 transition-colors duration-200`}
+                >
+                  {/* Level Header */}
+                  <div className="flex items-center space-x-3 mb-3">
+                    <Checkbox
+                      checked={checkedItems[level.id]}
+                      onCheckedChange={(checked) => {
+                        setCheckedItems(prev => ({...prev, [level.id]: checked}));
+                      }}
+                      className="border-purple-400"
+                    />
+                    <div>
+                      <div className="font-medium">{level.level}</div>
+                      {level.title !== "-" && (
+                        <div className="text-sm text-purple-600">{level.title}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Rewards Grid */}
+                  <div className="ml-8 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    {Object.entries(level.rewards).map(([name, value]) => 
+                      renderReward(name, value)
                     )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-6 text-sm">
-                  {level.diamonds !== "-" && (
-                    <span className="text-blue-600">💎 {level.diamonds}</span>
-                  )}
-                  {level.crystals !== "-" && (
-                    <span className="text-purple-600">🔮 {level.crystals}</span>
-                  )}
-                  {level.energy !== "-" && (
-                    <span className="text-green-600">⚡ {level.energy}</span>
-                  )}
-                  <span className="text-gray-600 ml-4">Required: {level.required}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {activeTab !== 'mira' && (
+            <div className="text-center text-gray-500 py-8">
+              Select Mira Level Rewards tab to view data
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 };
 
-export default App;
+export default InfinityNikkiTracker;
